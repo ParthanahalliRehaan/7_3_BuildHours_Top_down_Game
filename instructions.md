@@ -1,565 +1,645 @@
-# HAUNTED SHIFT — Godot Implementation Instructions
+# HAUNTED SHIFT: Build Instructions (Godot 4.x, top-down)
 
-This document is the copy/paste implementation guide for a small, playable **Godot 4.x** version of HAUNTED SHIFT. It uses GDScript, one main scene, and one autoload for all keyboard input. The game is drawn with Godot's built-in `_draw()` methods, so no external art or internet connection is required.
+> **Rule priority:** `AGENTS.md` is mandatory and overrides this document. Only six keys exist in this game: Up, Down, Left, Right, **Z**, **Space**. No mouse, no Buttons, no Enter/Esc/WASD, no other devices.
 
-> **Rule priority:** `AGENTS.md` is mandatory and overrides this document. Use only the four arrow keys, Z, and Space. Do not add mouse input, clickable buttons, extra keyboard shortcuts, or other input devices.
+## 0. The game in 5 lines
 
-## 1. Project settings
+- You are the **Skeptic**, a night guard who doesn't believe in ghosts. Top-down, one arena.
+- Collect **8 cursed relics**, then walk into the **Exit door** before the **150 s** timer ends.
+- One **Ghost** (AI) spawns faded for 3 s, then wanders, then chases when you get close.
+- You have **3 health**. A hit gives 1.5 s of immunity plus a knockback.
+- **Z** = Ward pulse (pushes and stuns the ghost, 1.5 s cooldown). **Space** = Dash (2.5 s cooldown).
 
-1. Create or open your Godot 4 project.
-2. Open **Project → Project Settings → Display → Window**.
-3. Set:
-   - **Viewport Width:** `960`
-   - **Viewport Height:** `540`
-   - **Window Width Override:** `1280` (optional)
-   - **Window Height Override:** `720` (optional)
-   - **Stretch Mode:** `canvas_items`
-   - **Stretch Aspect:** `keep`
-4. Under **Application → Run**, set **Main Scene** to `res://Main.tscn` after creating it.
-5. No custom Input Map actions are required. The `InputManager` below reads the six allowed physical keys centrally.
-6. Use Godot 4.x. This guide uses Godot 4 GDScript syntax.
+## 1. Key mapping on every screen
 
-## 2. Create the files and scene tree
+| Key | Title | Playing | Game Over |
+|---|---|---|---|
+| Up / Down / Left / Right | nothing | move (hold = continuous, release = stop) | nothing |
+| Z | **start** (fresh press) | ward pulse (cooldown, harmless if mashed) | **play again** (fresh press, ignored for first 1 s) |
+| Space | nothing | dash (cooldown 2.5 s) | nothing |
 
-Create these files:
+Opposite arrows held together cancel to "no movement". They never cause a loss.
+
+## 2. Folder layout
+
+The Godot project root is `Haunted_Shift/` (so `res://` = that folder). Rules files live one level up, in the repo root.
 
 ```text
-res://
-├── AGENTS.md                      # Keep the mandatory rules file in the project root
-├── README.md                      # Add the run instructions from section 8
-├── instructions.md                # This document
-├── Main.tscn
-└── scripts/
-    ├── InputManager.gd
-    └── Main.gd
+7_3_Buildhours_Top-down_Small_Game/
+├── AGENTS.md                  # exact copy from the event
+├── CLAUDE.md  GEMINI.md  .cursorrules  .windsurfrules
+├── .cursor/rules/game-jam.mdc
+├── .github/copilot-instructions.md
+├── README.md                  # run instructions (section 10)
+├── instructions.md            # this file
+└── Haunted_Shift/             # Godot project (project.godot lives here)
+    ├── scenes/
+    │   ├── Main.tscn
+    │   ├── skeptic/Skeptic.tscn
+    │   ├── ghost/Ghost.tscn
+    │   ├── relic/Relic.tscn
+    │   └── ui/StartMenu.tscn
+    │   └── ui/GameOver.tscn
+    ├── scripts/InputManager.gd      # autoload, the ONLY place that reads keys
+    ├── scenes/skeptic/Skeptic.gd
+    ├── scenes/ghost/Ghost.gd
+    ├── scenes/relic/Relic.gd
+    ├── scenes/ui/GameOver.gd
+    ├── scenes/Main.gd
+    └── assets/ (font/, art/, resources/)
 ```
 
-Create `scripts/` if it does not exist.
+**No `Pause` scene.** Pausing needs a 7th key (Esc/P), and Z/Space can't be used because an accidental press must never be harmful. Skipping it keeps us compliant. The round is only 2.5 minutes.
 
-### Create the main scene
+## 3. Project Settings (do this first)
 
-1. Create a new **2D Scene** with a `Node2D` root.
-2. Rename the root to `Main`.
-3. Attach `res://scripts/Main.gd` to the root.
-4. Save the scene as `res://Main.tscn`.
-5. In **Project → Project Settings → Autoload**, add `res://scripts/InputManager.gd` with the node name **InputManager** and enable it.
-6. Set `Main.tscn` as the project’s main scene.
+1. **Display → Window → Size:** Viewport Width `1280`, Height `720`. **Stretch → Mode** `canvas_items`, **Aspect** `keep`. Leave the window resizable (so it can go fullscreen via the OS).
+2. **GUI → Theme → Custom Font:** pick your font from `assets/font/` (all Labels use it automatically).
+3. **Autoload:** add `res://scripts/InputManager.gd`, node name exactly `InputManager`, enabled.
+4. **Application → Run → Main Scene:** `res://scenes/Main.tscn` (after you create it).
+5. Leave **Input Devices → Pointing → Emulate Touch From Mouse** OFF. Do not add anything to the Input Map.
 
-The game world, player, ghosts, collectibles, HUD, title screen, and results screen are drawn by `Main.gd`; therefore, no extra child nodes are needed. The visual entities are simple vector shapes generated at runtime.
+**Global UI rules:** use only `Label` and `ColorRect` for UI. **Never** add a `Button`, `LineEdit`, `PopupMenu` or anything that takes focus. Every `ColorRect` gets **Mouse → Filter = Ignore**.
 
-## 3. `scripts/InputManager.gd`
+## 4. Collision layers (set once, never touch again)
 
-Paste this entire code into `res://scripts/InputManager.gd`. It must be the only script that reads keyboard events.
+Editor path: select node → Inspector → **Collision → Layer / Mask** (tick only the numbers listed).
+
+| Node | Layer | Mask |
+|---|---|---|
+| Walls (StaticBody2D) | 1 | none |
+| Skeptic (CharacterBody2D) | 2 | 1 |
+| Ghost (CharacterBody2D) | 3 | 1 |
+| Ghost → HitBox (Area2D) | none | 2 |
+| Relic (Area2D) | none | 2 |
+
+Result: skeptic and ghost both collide with walls only. They never shove each other. Damage is handled by the HitBox.
+
+## 5. `scripts/InputManager.gd` (the ONLY key-reading file)
 
 ```gdscript
 extends Node
 
-# Centralized six-key input. Other scripts query these actions; they do not
-# inspect InputEvent or key constants themselves.
+# Six keys only. Held state is polled every frame (no OS key-repeat needed).
+# Presses are latched once and consumed once, so holding Z/Space never repeats.
 
-var held := {
-    "up": false,
-    "down": false,
-    "left": false,
-    "right": false,
-    "primary": false,
-    "secondary": false,
+const KEYS := {
+	"up": KEY_UP, "down": KEY_DOWN, "left": KEY_LEFT, "right": KEY_RIGHT,
+	"primary": KEY_Z, "secondary": KEY_SPACE,
 }
 
-var just_pressed := {
-    "up": false,
-    "down": false,
-    "left": false,
-    "right": false,
-    "primary": false,
-    "secondary": false,
-}
-
-var _key_to_action := {
-    KEY_UP: "up",
-    KEY_DOWN: "down",
-    KEY_LEFT: "left",
-    KEY_RIGHT: "right",
-    KEY_Z: "primary",
-    KEY_SPACE: "secondary",
-}
+var _held := {}
+var _latched := {}
+var _needs_release := {}
 
 func _ready() -> void:
-    # Run after normal gameplay nodes so one-frame press flags remain readable
-    # throughout the frame, then reset at the end of the frame.
-    process_priority = 1000
-    get_window().focus_exited.connect(_on_focus_exited)
-
-func _input(event: InputEvent) -> void:
-    if event is InputEventKey:
-        var key_event := event as InputEventKey
-        var key_code: int = key_event.physical_keycode
-        if key_code == KEY_NONE:
-            key_code = key_event.keycode
-
-        if not _key_to_action.has(key_code):
-            return
-
-        var action: String = _key_to_action[key_code]
-
-        if key_event.pressed and not key_event.echo:
-            if not held[action]:
-                just_pressed[action] = true
-            held[action] = true
-        elif not key_event.pressed:
-            held[action] = false
-
-        # Stop page scrolling if exported to a browser. This does not block
-        # keyboard focus or use any non-keyboard input.
-        if key_code in [KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_SPACE]:
-            get_viewport().set_input_as_handled()
+	process_priority = -1000  # run before everything else each frame
+	for a in KEYS:
+		_held[a] = false
+		_latched[a] = false
+		_needs_release[a] = false
 
 func _process(_delta: float) -> void:
-    # Input is polled by gameplay nodes earlier in this frame.
-    for action in just_pressed.keys():
-        just_pressed[action] = false
+	if not get_window().has_focus():
+		flush()
+		for a in _held:
+			_held[a] = false
+		return
+	for a in KEYS:
+		var now: bool = Input.is_key_pressed(KEYS[a])
+		if _needs_release[a]:
+			if not now:
+				_needs_release[a] = false
+			_held[a] = false
+			continue
+		if now and not _held[a]:
+			_latched[a] = true
+		_held[a] = now
 
 func is_held(action: String) -> bool:
-    return bool(held.get(action, false))
+	return _held.get(action, false)
 
-func was_just_pressed(action: String) -> bool:
-    return bool(just_pressed.get(action, false))
+# Returns true ONCE per fresh press.
+func consume_press(action: String) -> bool:
+	if _latched.get(action, false):
+		_latched[action] = false
+		return true
+	return false
 
-func clear_all() -> void:
-    for action in held.keys():
-        held[action] = false
-        just_pressed[action] = false
+# Opposite arrows cancel out. Diagonals are normalised.
+func direction() -> Vector2:
+	var x := int(_held["right"]) - int(_held["left"])
+	var y := int(_held["down"]) - int(_held["up"])
+	return Vector2(x, y).normalized()
 
-func _on_focus_exited() -> void:
-    clear_all()
+# Call on EVERY screen change. Drops queued presses, and a Z/Space that is
+# still physically held must be released before it counts as a fresh press.
+func flush() -> void:
+	for a in KEYS:
+		_latched[a] = false
+	_needs_release["primary"] = true
+	_needs_release["secondary"] = true
 ```
 
-**Important:** Keep the Autoload node name exactly `InputManager`. Do not add direct key checks in `Main.gd`.
+## 6. Build steps, scene by scene
 
-## 4. `scripts/Main.gd`
+Colours are placeholders (rectangles first, art comes at the end). Sizes are big on purpose: readable from 2 m.
 
-Attach this complete script to the `Main` `Node2D`. It includes movement, collectibles, ghosts, collision handling, the ward pulse, dash, timer, title screen, win/loss screen, and restart.
+### 6.1 `Skeptic.tscn`
+
+1. New Scene → root **CharacterBody2D**, rename `Skeptic`. Collision: Layer 2, Mask 1.
+2. Add child **ColorRect** named `Body`: Position `(-18, -18)`, Size `(36, 36)`, Color `#ffe17a`, Mouse Filter Ignore.
+3. Add child **CollisionShape2D** → Shape: new **CircleShape2D**, Radius `16`.
+4. Attach `scenes/skeptic/Skeptic.gd`, save as `scenes/skeptic/Skeptic.tscn`.
+
+```gdscript
+extends CharacterBody2D
+
+signal hit
+
+const SPEED := 220.0
+const DASH_SPEED := 560.0
+const DASH_TIME := 0.16
+const DASH_COOLDOWN := 2.5
+const WARD_RANGE := 160.0
+const WARD_COOLDOWN := 1.5
+const IMMUNITY := 1.5
+const KNOCK_SPEED := 420.0
+const KNOCK_TIME := 0.15
+
+var active := false
+var facing := Vector2.RIGHT
+var dash_left := 0.0
+var dash_cooldown_left := 0.0
+var ward_cooldown_left := 0.0
+var ward_flash_left := 0.0
+var immune_left := 0.0
+var knock_left := 0.0
+var knock_velocity := Vector2.ZERO
+
+@onready var body_rect: ColorRect = $Body
+
+func _ready() -> void:
+	add_to_group("skeptic")
+
+func reset(pos: Vector2) -> void:
+	global_position = pos
+	velocity = Vector2.ZERO
+	facing = Vector2.RIGHT
+	dash_left = 0.0
+	dash_cooldown_left = 0.0
+	ward_cooldown_left = 0.0
+	ward_flash_left = 0.0
+	immune_left = 0.0
+	knock_left = 0.0
+	body_rect.modulate.a = 1.0
+	active = true
+
+func _physics_process(delta: float) -> void:
+	if not active:
+		velocity = Vector2.ZERO
+		return
+
+	dash_cooldown_left = maxf(0.0, dash_cooldown_left - delta)
+	ward_cooldown_left = maxf(0.0, ward_cooldown_left - delta)
+	ward_flash_left = maxf(0.0, ward_flash_left - delta)
+	immune_left = maxf(0.0, immune_left - delta)
+	body_rect.modulate.a = 0.4 if (immune_left > 0.0 and int(immune_left * 10.0) % 2 == 0) else 1.0
+
+	var dir := InputManager.direction()
+	if dir != Vector2.ZERO:
+		facing = dir
+
+	# Fresh presses only. Pressing during cooldown is harmless.
+	if InputManager.consume_press("secondary") and dash_cooldown_left <= 0.0:
+		dash_left = DASH_TIME
+		dash_cooldown_left = DASH_COOLDOWN
+	if InputManager.consume_press("primary") and ward_cooldown_left <= 0.0:
+		_use_ward()
+
+	if knock_left > 0.0:
+		knock_left -= delta
+		velocity = knock_velocity
+	elif dash_left > 0.0:
+		dash_left -= delta
+		velocity = facing * DASH_SPEED
+	else:
+		velocity = dir * SPEED  # released keys => dir is zero => stop
+	move_and_slide()
+	queue_redraw()
+
+func _use_ward() -> void:
+	ward_cooldown_left = WARD_COOLDOWN
+	ward_flash_left = 0.25
+	for g in get_tree().get_nodes_in_group("ghost"):
+		if global_position.distance_to(g.global_position) <= WARD_RANGE:
+			g.stun(global_position)
+
+# Called by the Ghost's HitBox. Ignores hits while immune.
+func take_hit(from_pos: Vector2) -> void:
+	if not active or immune_left > 0.0:
+		return
+	immune_left = IMMUNITY
+	knock_left = KNOCK_TIME
+	knock_velocity = (global_position - from_pos).normalized() * KNOCK_SPEED
+	hit.emit()
+
+func _draw() -> void:
+	if ward_flash_left > 0.0:
+		var r := WARD_RANGE * (1.0 - ward_flash_left / 0.25)
+		draw_arc(Vector2.ZERO, r, 0.0, TAU, 48, Color("#73f7ff"), 4.0)
+```
+
+### 6.2 `Ghost.tscn` (one AI ghost)
+
+1. New Scene → root **CharacterBody2D**, rename `Ghost`. Collision: Layer 3, Mask 1.
+2. Child **ColorRect** `Body`: Position `(-22, -22)`, Size `(44, 44)`, Color `#8c79ff`, Mouse Filter Ignore.
+3. Child **CollisionShape2D**: new **CircleShape2D**, Radius `20`.
+4. Child **Area2D** named `HitBox`: Layer none, **Mask 2 only**. Under it add **CollisionShape2D** with **CircleShape2D** Radius `18` (smaller than the body, so it is forgiving).
+5. Attach `scenes/ghost/Ghost.gd`, save as `scenes/ghost/Ghost.tscn`.
+
+**AI = 4-state machine:** `SPAWNING` (3 s, faded, harmless) → `WANDER` (random points) → `CHASE` (sees you within 420 px, gives up beyond 560 px) → `STUNNED` (1.5 s after a Ward, harmless). Chase speed starts slow (95, you run at 220) and creeps up to 130 over the round.
+
+```gdscript
+extends CharacterBody2D
+
+enum State { SPAWNING, WANDER, CHASE, STUNNED }
+
+const WANDER_SPEED := 60.0
+const BASE_CHASE_SPEED := 95.0
+const MAX_EXTRA_SPEED := 35.0
+const SIGHT_RANGE := 420.0
+const LOSE_RANGE := 560.0
+const SPAWN_TIME := 3.0
+const STUN_TIME := 1.5
+const ARENA := Rect2(100, 140, 1080, 500)
+
+var active := false
+var state := State.SPAWNING
+var timer := 0.0
+var elapsed := 0.0
+var wander_target := Vector2.ZERO
+
+@onready var body_rect: ColorRect = $Body
+@onready var hit_box: Area2D = $HitBox
+
+func _ready() -> void:
+	add_to_group("ghost")
+
+func reset(pos: Vector2) -> void:
+	global_position = pos
+	velocity = Vector2.ZERO
+	elapsed = 0.0
+	timer = SPAWN_TIME
+	state = State.SPAWNING
+	_pick_wander()
+	active = true
+
+func stun(from_pos: Vector2) -> void:
+	if state == State.SPAWNING:
+		return
+	state = State.STUNNED
+	timer = STUN_TIME
+	velocity = (global_position - from_pos).normalized() * 380.0
+
+func _pick_wander() -> void:
+	wander_target = Vector2(
+		randf_range(ARENA.position.x, ARENA.end.x),
+		randf_range(ARENA.position.y, ARENA.end.y))
+	timer = 2.5
+
+func _physics_process(delta: float) -> void:
+	if not active:
+		velocity = Vector2.ZERO
+		return
+	elapsed += delta
+	var skeptic := get_tree().get_first_node_in_group("skeptic") as Node2D
+	var dist := INF
+	if skeptic:
+		dist = global_position.distance_to(skeptic.global_position)
+
+	match state:
+		State.SPAWNING:
+			timer -= delta
+			body_rect.modulate = Color(1, 1, 1, 0.3 + 0.15 * sin(elapsed * 12.0))
+			velocity = Vector2.ZERO
+			if timer <= 0.0:
+				state = State.WANDER
+				body_rect.modulate = Color.WHITE
+			return
+		State.STUNNED:
+			timer -= delta
+			body_rect.modulate = Color("#79f3ff")
+			velocity = velocity.move_toward(Vector2.ZERO, 900.0 * delta)
+			if timer <= 0.0:
+				state = State.WANDER
+				_pick_wander()
+				body_rect.modulate = Color.WHITE
+		State.WANDER:
+			timer -= delta
+			if timer <= 0.0 or global_position.distance_to(wander_target) < 20.0:
+				_pick_wander()
+			velocity = (wander_target - global_position).normalized() * WANDER_SPEED
+			if dist < SIGHT_RANGE:
+				state = State.CHASE
+		State.CHASE:
+			var speed := BASE_CHASE_SPEED + minf(MAX_EXTRA_SPEED, elapsed * 0.3)
+			velocity = (skeptic.global_position - global_position).normalized() * speed
+			if dist > LOSE_RANGE:
+				state = State.WANDER
+				_pick_wander()
+
+	move_and_slide()
+
+	# Contact damage (only while awake, not stunned)
+	if state == State.WANDER or state == State.CHASE:
+		for b in hit_box.get_overlapping_bodies():
+			if b.is_in_group("skeptic"):
+				b.take_hit(global_position)
+```
+
+### 6.3 `Relic.tscn`
+
+1. New Scene → root **Area2D**, rename `Relic`. Layer none, **Mask 2 only**.
+2. Child **ColorRect** `Body`: Position `(-14, -14)`, Size `(28, 28)`, Rotation `45°`, Color `#72f5d9`, Mouse Filter Ignore.
+3. Child **CollisionShape2D**: new **CircleShape2D**, Radius `24` (generous pickup).
+4. Attach `scenes/relic/Relic.gd`, save as `scenes/relic/Relic.tscn`.
+
+```gdscript
+extends Area2D
+
+signal collected
+
+func _ready() -> void:
+	body_entered.connect(_on_body_entered)
+
+func _on_body_entered(body: Node) -> void:
+	if body.is_in_group("skeptic"):
+		collected.emit()
+		queue_free()
+```
+
+### 6.4 `StartMenu.tscn`
+
+Root **CanvasLayer** named `StartMenu`, Layer `10`. Children (all Mouse Filter Ignore):
+
+| Node | Type | Setup |
+|---|---|---|
+| `Bg` | ColorRect | Position `(0,0)`, Size `(1280,720)`, Color `#10111f` |
+| `Title` | Label | Pos `(0,150)`, Size `(1280,110)`, text `HAUNTED SHIFT`, font size `96`, centered |
+| `Goal` | Label | Pos `(0,280)`, Size `(1280,50)`, text `Collect 8 relics. Reach the exit.`, size `34`, centered |
+| `Controls` | Label | Pos `(0,370)`, Size `(1280,50)`, text `ARROWS = MOVE     Z = WARD     SPACE = DASH`, size `36`, centered |
+| `Prompt` | Label | Pos `(0,500)`, Size `(1280,80)`, text `Press Z to start`, size `60`, centered, colour `#ffd76a` |
+
+Centering = Label Settings → Horizontal Alignment `Center` (Theme Overrides → Font Size for the size). No script needed.
+
+### 6.5 `GameOver.tscn`
+
+Root **CanvasLayer** `GameOver`, Layer `10`. Children (all Mouse Filter Ignore):
+
+| Node | Type | Setup |
+|---|---|---|
+| `Dim` | ColorRect | Pos `(0,0)`, Size `(1280,720)`, Color `#000000d9` |
+| `Result` | Label | Pos `(0,160)`, Size `(1280,100)`, size `80`, centered |
+| `Score` | Label | Pos `(0,300)`, Size `(1280,70)`, size `56`, centered |
+| `Prompt` | Label | Pos `(0,470)`, Size `(1280,70)`, text `Press Z to play again`, size `52`, centered, colour `#ffd76a` |
+| `Hint` | Label | Pos `(0,580)`, Size `(1280,40)`, text `ARROWS = MOVE   Z = WARD   SPACE = DASH`, size `28`, centered |
+
+Attach `scenes/ui/GameOver.gd`:
+
+```gdscript
+extends CanvasLayer
+
+func show_result(message: String, final_score: int) -> void:
+	$Result.text = message
+	$Score.text = "SCORE: %d" % final_score
+```
+
+### 6.6 `Main.tscn` (the glue)
+
+New Scene → root **Node2D** named `Main`, attach `scenes/Main.gd`, save as `scenes/Main.tscn`. Build this tree exactly:
+
+```text
+Main (Node2D)  [Main.gd]
+├── World (Node2D)
+│   ├── Floor        (ColorRect: Pos (40,80), Size (1200,600), Color #20243a)
+│   ├── Walls        (StaticBody2D, Layer 1, Mask none)
+│   │   ├── Top      (CollisionShape2D, RectangleShape2D (1280,40), Position (640,60))
+│   │   ├── Bottom   (CollisionShape2D, RectangleShape2D (1280,40), Position (640,700))
+│   │   ├── Left     (CollisionShape2D, RectangleShape2D (40,720),  Position (20,380))
+│   │   └── Right    (CollisionShape2D, RectangleShape2D (40,720),  Position (1260,380))
+│   ├── Relics       (Node2D, empty, Main fills it)
+│   ├── Exit         (Node2D, Position (1190,380))
+│   │   ├── Door     (ColorRect: Pos (-24,-40), Size (48,80), Color #a45170)
+│   │   └── Label    (Label: Pos (-70,48), Size (140,30), size 22, centered, text "EXIT LOCKED")
+│   ├── Skeptic      (instance of Skeptic.tscn)
+│   └── Ghost        (instance of Ghost.tscn)
+├── HUD (CanvasLayer, Layer 1)
+│   ├── Bar          (ColorRect: Pos (0,0), Size (1280,70), Color #191a2d)
+│   ├── HealthLabel  (Label: Pos (30,16),  size 30)
+│   ├── ScoreLabel   (Label: Pos (320,16), size 30)
+│   ├── RelicLabel   (Label: Pos (620,16), size 30)
+│   ├── TimeLabel    (Label: Pos (1000,16), size 30)
+│   └── HintLabel    (Label: Pos (30,688), Size (1220,30), size 24)
+├── StartMenu        (instance of StartMenu.tscn)
+└── GameOver         (instance of GameOver.tscn)
+```
+
+All ColorRects: Mouse Filter **Ignore**. Skeptic and Ghost positions are set by code (`reset()`), so leave them at `(0,0)`.
 
 ```gdscript
 extends Node2D
 
-enum GameState { TITLE, PLAYING, RESULTS }
+enum State { TITLE, PLAYING, GAME_OVER }
 
-const WORLD_SIZE := Vector2(960.0, 540.0)
-const PLAYER_RADIUS := 13.0
-const PLAYER_SPEED := 220.0
-const DASH_SPEED := 520.0
-const DASH_DURATION := 0.16
-const DASH_COOLDOWN := 2.5
-const WARD_RANGE := 125.0
-const WARD_COOLDOWN := 1.25
+const RELIC_SCENE := preload("res://scenes/relic/Relic.tscn")
+const REQUIRED_RELICS := 8
 const ROUND_TIME := 150.0
-const REQUIRED_OBJECTS := 8
-const GHOST_RADIUS := 14.0
-const GHOST_SPEED_START := 62.0
-const DAMAGE_IMMUNITY := 1.15
+const RELIC_POINTS := 100
+const START_HEALTH := 3
+const SKEPTIC_START := Vector2(140, 380)
+const GHOST_START := Vector2(1100, 160)
+const EXIT_RADIUS := 50.0
+const RELIC_POSITIONS: Array[Vector2] = [
+	Vector2(260, 160), Vector2(520, 200), Vector2(780, 150), Vector2(1000, 260),
+	Vector2(300, 540), Vector2(560, 480), Vector2(820, 560), Vector2(1050, 520),
+]
 
-const ARENA := Rect2(28.0, 66.0, 904.0, 446.0)
-const EXIT_POSITION := Vector2(886.0, 286.0)
+@onready var world: Node2D = $World
+@onready var relics_root: Node2D = $World/Relics
+@onready var exit_door: Node2D = $World/Exit
+@onready var door_rect: ColorRect = $World/Exit/Door
+@onready var exit_label: Label = $World/Exit/Label
+@onready var skeptic = $World/Skeptic
+@onready var ghost = $World/Ghost
+@onready var hud: CanvasLayer = $HUD
+@onready var start_menu: CanvasLayer = $StartMenu
+@onready var game_over: CanvasLayer = $GameOver
 
-var state: GameState = GameState.TITLE
-var player_position := Vector2(130.0, 285.0)
-var last_direction := Vector2.RIGHT
-var player_health := 3
+var state := State.TITLE
+var state_time := 0.0
+var health := START_HEALTH
 var score := 0
-var objects_collected := 0
+var relics_collected := 0
 var time_left := ROUND_TIME
-var result_text := ""
-var dash_timer := 0.0
-var dash_cooldown_left := 0.0
-var ward_cooldown_left := 0.0
-var damage_immunity_left := 0.0
-var round_elapsed := 0.0
-var spawn_warning_left := 0.0
-var extra_ghost_spawned := false
-var ward_flash_left := 0.0
-var dash_direction := Vector2.RIGHT
-
-var collectibles: Array[Vector2] = []
-var ghosts: Array[Dictionary] = []
 
 func _ready() -> void:
-    get_window().size = Vector2i(1280, 720)
-    queue_redraw()
+	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
+	skeptic.hit.connect(_on_skeptic_hit)
+	_show_title()
 
-func _process(delta: float) -> void:
-    # All screen transitions use a fresh Z press. Holding Z cannot skip screens.
-    match state:
-        GameState.TITLE:
-            if InputManager.was_just_pressed("primary"):
-                _start_game()
-            # Space on the title screen is deliberately harmless.
-        GameState.PLAYING:
-            _update_game(delta)
-        GameState.RESULTS:
-            round_elapsed += delta
-            if InputManager.was_just_pressed("primary") and round_elapsed >= 1.0:
-                _start_game()
-
-    queue_redraw()
+func _show_title() -> void:
+	state = State.TITLE
+	state_time = 0.0
+	world.visible = false
+	hud.visible = false
+	game_over.visible = false
+	start_menu.visible = true
+	skeptic.active = false
+	ghost.active = false
+	InputManager.flush()
 
 func _start_game() -> void:
-    InputManager.clear_all()
-    state = GameState.PLAYING
-    player_position = Vector2(130.0, 285.0)
-    last_direction = Vector2.RIGHT
-    player_health = 3
-    score = 0
-    objects_collected = 0
-    time_left = ROUND_TIME
-    round_elapsed = 0.0
-    dash_timer = 0.0
-    dash_cooldown_left = 0.0
-    ward_cooldown_left = 0.0
-    damage_immunity_left = 0.0
-    ward_flash_left = 0.0
-    spawn_warning_left = 0.0
-    extra_ghost_spawned = false
-    result_text = ""
-    collectibles.clear()
-    ghosts.clear()
+	state = State.PLAYING
+	state_time = 0.0
+	health = START_HEALTH
+	score = 0
+	relics_collected = 0
+	time_left = ROUND_TIME
+	for c in relics_root.get_children():
+		c.queue_free()
+	for p in RELIC_POSITIONS:
+		var r := RELIC_SCENE.instantiate()
+		r.position = p
+		r.collected.connect(_on_relic_collected)
+		relics_root.add_child(r)
+	skeptic.reset(SKEPTIC_START)
+	ghost.reset(GHOST_START)
+	world.visible = true
+	hud.visible = true
+	start_menu.visible = false
+	game_over.visible = false
+	InputManager.flush()
+	_update_hud()
 
-    # Fixed, reachable positions keep the first run fair and testable.
-    var object_positions: Array[Vector2] = [
-        Vector2(250, 120), Vector2(385, 170), Vector2(540, 105),
-        Vector2(720, 150), Vector2(300, 370), Vector2(470, 420),
-        Vector2(650, 355), Vector2(790, 430), Vector2(170, 440),
-        Vector2(575, 250), Vector2(400, 285), Vector2(750, 270)
-    ]
-    for p in object_positions:
-        collectibles.append(p)
+func _process(delta: float) -> void:
+	state_time += delta
+	match state:
+		State.TITLE:
+			InputManager.consume_press("secondary")  # Space does nothing here
+			if InputManager.consume_press("primary"):
+				_start_game()
+		State.PLAYING:
+			_update_playing(delta)
+		State.GAME_OVER:
+			InputManager.consume_press("secondary")
+			var pressed := InputManager.consume_press("primary")
+			if pressed and state_time >= 1.0:  # ignore Z for the first 1 s
+				_start_game()
 
-    _add_ghost(Vector2(600, 155), 0)
-    _add_ghost(Vector2(720, 390), 1)
+func _update_playing(delta: float) -> void:
+	time_left = maxf(0.0, time_left - delta)
+	if time_left <= 0.0:
+		_finish(false, "TIME'S UP")
+		return
+	var unlocked := relics_collected >= REQUIRED_RELICS
+	door_rect.color = Color("#63f2a6") if unlocked else Color("#a45170")
+	exit_label.text = "EXIT OPEN" if unlocked else "EXIT LOCKED"
+	if unlocked and skeptic.global_position.distance_to(exit_door.global_position) < EXIT_RADIUS:
+		_finish(true, "YOU ESCAPED!")
+		return
+	_update_hud()
 
-func _add_ghost(spawn_position: Vector2, ghost_type: int) -> void:
-    ghosts.append({
-        "position": spawn_position,
-        "type": ghost_type,
-        "speed": GHOST_SPEED_START + float(ghost_type) * 8.0,
-        "stun": 0.0,
-        "phase": randf_range(0.0, TAU)
-    })
+func _on_relic_collected() -> void:
+	relics_collected += 1
+	score += RELIC_POINTS
 
-func _update_game(delta: float) -> void:
-    round_elapsed += delta
-    time_left = maxf(0.0, time_left - delta)
-    dash_cooldown_left = maxf(0.0, dash_cooldown_left - delta)
-    ward_cooldown_left = maxf(0.0, ward_cooldown_left - delta)
-    damage_immunity_left = maxf(0.0, damage_immunity_left - delta)
-    ward_flash_left = maxf(0.0, ward_flash_left - delta)
+func _on_skeptic_hit() -> void:
+	health -= 1
+	if health <= 0:
+		_finish(false, "CAUGHT BY THE GHOST")
 
-    if time_left <= 0.0:
-        _finish_round(false, "TIME'S UP")
-        return
+func _finish(won: bool, message: String) -> void:
+	state = State.GAME_OVER
+	state_time = 0.0
+	skeptic.active = false
+	ghost.active = false
+	if won:
+		score += int(time_left) * 5
+	game_over.show_result(message, score)
+	game_over.visible = true
+	InputManager.flush()  # a Z still held from gameplay cannot skip this screen
 
-    # Telegraph a new ghost for 1.5 seconds before it enters the arena.
-    if not extra_ghost_spawned and round_elapsed >= 32.0:
-        if spawn_warning_left <= 0.0:
-            spawn_warning_left = 1.5
-        else:
-            spawn_warning_left -= delta
-            if spawn_warning_left <= 0.0:
-                extra_ghost_spawned = true
-                _add_ghost(Vector2(850.0, 100.0), 2)
-
-    var movement := Vector2.ZERO
-    if InputManager.is_held("up"):
-        movement.y -= 1.0
-    if InputManager.is_held("down"):
-        movement.y += 1.0
-    if InputManager.is_held("left"):
-        movement.x -= 1.0
-    if InputManager.is_held("right"):
-        movement.x += 1.0
-
-    if movement.length_squared() > 0.0:
-        movement = movement.normalized()
-        last_direction = movement
-
-    # Fresh Space press starts a short dash; holding Space cannot retrigger it.
-    if InputManager.was_just_pressed("secondary") and dash_cooldown_left <= 0.0:
-        dash_direction = last_direction
-        dash_timer = DASH_DURATION
-        dash_cooldown_left = DASH_COOLDOWN
-
-    if dash_timer > 0.0:
-        dash_timer = maxf(0.0, dash_timer - delta)
-        player_position += dash_direction * DASH_SPEED * delta
-    else:
-        player_position += movement * PLAYER_SPEED * delta
-
-    player_position.x = clampf(player_position.x, ARENA.position.x + PLAYER_RADIUS, ARENA.end.x - PLAYER_RADIUS)
-    player_position.y = clampf(player_position.y, ARENA.position.y + PLAYER_RADIUS, ARENA.end.y - PLAYER_RADIUS)
-
-    # Fresh Z press triggers a defensive pulse. It pushes nearby ghosts away.
-    if InputManager.was_just_pressed("primary") and ward_cooldown_left <= 0.0:
-        ward_cooldown_left = WARD_COOLDOWN
-        ward_flash_left = 0.22
-        for i in range(ghosts.size()):
-            var ghost_position: Vector2 = ghosts[i]["position"]
-            var offset: Vector2 = ghost_position - player_position
-            if offset.length() <= WARD_RANGE:
-                var push_direction := offset.normalized()
-                if push_direction == Vector2.ZERO:
-                    push_direction = Vector2.RIGHT
-                ghosts[i]["position"] = ghost_position + push_direction * 92.0
-                ghosts[i]["stun"] = 0.45
-
-    _update_collectibles()
-    _update_ghosts(delta)
-
-    if objects_collected >= REQUIRED_OBJECTS and player_position.distance_to(EXIT_POSITION) < 32.0:
-        _finish_round(true, "YOU ESCAPED!")
-        return
-
-    if player_health <= 0:
-        _finish_round(false, "CAUGHT BY THE HAUNTING")
-
-func _update_collectibles() -> void:
-    for i in range(collectibles.size() - 1, -1, -1):
-        if player_position.distance_to(collectibles[i]) < PLAYER_RADIUS + 12.0:
-            collectibles.remove_at(i)
-            objects_collected += 1
-            score += 100
-
-func _update_ghosts(delta: float) -> void:
-    for i in range(ghosts.size()):
-        var ghost_position: Vector2 = ghosts[i]["position"]
-        var stun_time: float = ghosts[i]["stun"]
-        if stun_time > 0.0:
-            ghosts[i]["stun"] = maxf(0.0, stun_time - delta)
-            continue
-
-        var toward_player := player_position - ghost_position
-        if toward_player.length_squared() > 1.0:
-            var ghost_speed: float = float(ghosts[i]["speed"])
-            ghost_speed += minf(24.0, round_elapsed * 0.10)
-            ghost_position += toward_player.normalized() * ghost_speed * delta
-        ghosts[i]["position"] = ghost_position
-
-        if player_position.distance_to(ghost_position) < PLAYER_RADIUS + GHOST_RADIUS:
-            if damage_immunity_left <= 0.0:
-                player_health -= 1
-                damage_immunity_left = DAMAGE_IMMUNITY
-                # Knock the player away to prevent repeated contact damage.
-                var away := (player_position - ghost_position).normalized()
-                if away == Vector2.ZERO:
-                    away = Vector2.RIGHT
-                player_position += away * 48.0
-                player_position.x = clampf(player_position.x, ARENA.position.x + PLAYER_RADIUS, ARENA.end.x - PLAYER_RADIUS)
-                player_position.y = clampf(player_position.y, ARENA.position.y + PLAYER_RADIUS, ARENA.end.y - PLAYER_RADIUS)
-
-func _finish_round(won: bool, message: String) -> void:
-    state = GameState.RESULTS
-    result_text = message
-    if won:
-        score += int(time_left * 5.0)
-    # This timer also prevents a held Z from instantly restarting the result.
-    round_elapsed = 0.0
-    InputManager.clear_all()
-
-func _draw() -> void:
-    draw_rect(Rect2(Vector2.ZERO, WORLD_SIZE), Color("#10111f"))
-
-    if state == GameState.TITLE:
-        _draw_title()
-        return
-
-    _draw_arena()
-    _draw_collectibles()
-    _draw_exit()
-    _draw_ghosts()
-    _draw_player()
-    _draw_hud()
-
-    if state == GameState.RESULTS:
-        _draw_results()
-
-func _draw_title() -> void:
-    draw_rect(Rect2(40, 38, 880, 464), Color("#191a2d"), true, 18.0)
-    draw_circle(Vector2(480, 165), 48, Color("#6f4ba8"))
-    draw_circle(Vector2(465, 151), 12, Color("#c9f7ff"))
-    draw_circle(Vector2(495, 151), 12, Color("#c9f7ff"))
-    draw_circle(Vector2(465, 151), 5, Color("#171526"))
-    draw_circle(Vector2(495, 151), 5, Color("#171526"))
-    draw_string(ThemeDB.fallback_font, Vector2(218, 255), "HAUNTED SHIFT", HORIZONTAL_ALIGNMENT_LEFT, -1, 42, Color("#f2efff"))
-    draw_string(ThemeDB.fallback_font, Vector2(255, 300), "COLLECT 8 CURSED OBJECTS. FIND THE EXIT.", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color("#8fe7f2"))
-    draw_string(ThemeDB.fallback_font, Vector2(300, 345), "ARROWS  MOVE     Z  WARD     SPACE  DASH", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("#ded9f4"))
-    draw_string(ThemeDB.fallback_font, Vector2(340, 405), "Press Z to start", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color("#ffd76a"))
-    draw_string(ThemeDB.fallback_font, Vector2(300, 448), "DODGE GHOSTS. ESCAPE BEFORE TIME RUNS OUT.", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#b9b5ce"))
-
-func _draw_arena() -> void:
-    draw_rect(ARENA, Color("#20243a"), true, 12.0)
-    # Decorative floor tiles.
-    var tile_x := ARENA.position.x + 10.0
-    while tile_x < ARENA.end.x:
-        draw_line(Vector2(tile_x, ARENA.position.y + 8.0), Vector2(tile_x, ARENA.end.y - 8.0), Color("#292d45"), 1.0)
-        tile_x += 48.0
-    var tile_y := ARENA.position.y + 8.0
-    while tile_y < ARENA.end.y:
-        draw_line(Vector2(ARENA.position.x + 8.0, tile_y), Vector2(ARENA.end.x - 8.0, tile_y), Color("#292d45"), 1.0)
-        tile_y += 48.0
-
-    # Non-lethal furniture blocks, clearly visible and easy to route around.
-    var obstacles: Array[Rect2] = [
-        Rect2(345, 95, 42, 82), Rect2(495, 350, 70, 35),
-        Rect2(625, 190, 38, 68), Rect2(205, 250, 50, 30)
-    ]
-    for obstacle in obstacles:
-        draw_rect(obstacle, Color("#45415f"), true, 5.0)
-        draw_rect(obstacle, Color("#6e6688"), false, 2.0, true)
-
-    if spawn_warning_left > 0.0 and not extra_ghost_spawned:
-        draw_circle(Vector2(850, 100), 30.0, Color(0.95, 0.25, 0.55, 0.16))
-        draw_arc(Vector2(850, 100), 30.0, 0.0, TAU, 48, Color("#ff729b"), 3.0)
-        draw_string(ThemeDB.fallback_font, Vector2(740, 75), "GHOST INCOMING!", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#ff9bb8"))
-
-func _draw_collectibles() -> void:
-    for p in collectibles:
-        draw_circle(p, 13.0, Color(0.2, 0.95, 0.9, 0.16))
-        draw_colored_polygon(PackedVector2Array([
-            p + Vector2(0, -10), p + Vector2(8, 0),
-            p + Vector2(0, 10), p + Vector2(-8, 0)
-        ]), Color("#72f5d9"))
-        draw_circle(p, 3.0, Color("#f7ffcf"))
-
-func _draw_exit() -> void:
-    var unlocked := objects_collected >= REQUIRED_OBJECTS
-    var exit_color := Color("#63f2a6") if unlocked else Color("#a45170")
-    draw_rect(Rect2(EXIT_POSITION - Vector2(17, 28), Vector2(34, 56)), exit_color, true, 5.0)
-    draw_rect(Rect2(EXIT_POSITION - Vector2(10, 21), Vector2(20, 42)), Color("#171827"), true, 3.0)
-    draw_circle(EXIT_POSITION + Vector2(5, 0), 2.5, Color("#ffe58a"))
-    var label := "EXIT OPEN" if unlocked else "EXIT LOCKED"
-    draw_string(ThemeDB.fallback_font, EXIT_POSITION + Vector2(-42, 43), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, exit_color)
-
-func _draw_ghosts() -> void:
-    for ghost in ghosts:
-        var p: Vector2 = ghost["position"]
-        var stunned: bool = float(ghost["stun"]) > 0.0
-        var ghost_color := Color("#8c79ff") if not stunned else Color("#79f3ff")
-        draw_circle(p, 21.0, Color(ghost_color.r, ghost_color.g, ghost_color.b, 0.13))
-        draw_circle(p, GHOST_RADIUS, ghost_color)
-        draw_circle(p + Vector2(-4, -2), 3.0, Color("#ffffff"))
-        draw_circle(p + Vector2(4, -2), 3.0, Color("#ffffff"))
-        draw_circle(p + Vector2(-4, -2), 1.5, Color("#25213d"))
-        draw_circle(p + Vector2(4, -2), 1.5, Color("#25213d"))
-        draw_arc(p + Vector2(0, 2), 6.0, 0.2, PI - 0.2, 12, Color("#25213d"), 1.5)
-
-func _draw_player() -> void:
-    var player_color := Color("#ffe17a")
-    if damage_immunity_left > 0.0 and int(Time.get_ticks_msec() / 90) % 2 == 0:
-        player_color = Color("#ffffff")
-    draw_circle(player_position, 23.0, Color(0.95, 0.78, 0.3, 0.12))
-    draw_circle(player_position, PLAYER_RADIUS, player_color)
-    draw_circle(player_position + Vector2(-4, -3), 2.5, Color("#24243b"))
-    draw_circle(player_position + Vector2(4, -3), 2.5, Color("#24243b"))
-    if ward_flash_left > 0.0:
-        var radius := WARD_RANGE * (1.0 - ward_flash_left / 0.22)
-        draw_arc(player_position, radius, 0.0, TAU, 48, Color("#73f7ff"), 3.0)
-    if dash_timer > 0.0:
-        draw_line(player_position, player_position - dash_direction * 34.0, Color("#ffd76a"), 5.0)
-
-func _draw_hud() -> void:
-    draw_rect(Rect2(28, 15, 904, 40), Color("#191a2d"), true, 8.0)
-    draw_string(ThemeDB.fallback_font, Vector2(44, 41), "HEALTH: " + "♥ ".repeat(player_health), HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color("#ff7898"))
-    draw_string(ThemeDB.fallback_font, Vector2(270, 41), "SCORE: " + str(score), HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color("#f2efff"))
-    draw_string(ThemeDB.fallback_font, Vector2(440, 41), "OBJECTS: " + str(objects_collected) + "/" + str(REQUIRED_OBJECTS), HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color("#72f5d9"))
-    draw_string(ThemeDB.fallback_font, Vector2(730, 41), "TIME: " + str(ceili(time_left)), HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color("#ffd76a"))
-    var dash_text := "READY" if dash_cooldown_left <= 0.0 else str(snappedf(dash_cooldown_left, 0.1))
-    var ward_text := "READY" if ward_cooldown_left <= 0.0 else str(snappedf(ward_cooldown_left, 0.1))
-    draw_string(ThemeDB.fallback_font, Vector2(42, 530), "SPACE DASH: " + dash_text + "     Z WARD: " + ward_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#b9b5ce"))
-    if objects_collected < REQUIRED_OBJECTS:
-        draw_string(ThemeDB.fallback_font, Vector2(590, 530), "COLLECT " + str(REQUIRED_OBJECTS - objects_collected) + " MORE TO OPEN EXIT", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#8fe7f2"))
-    elif player_position.distance_to(EXIT_POSITION) >= 32.0:
-        draw_string(ThemeDB.fallback_font, Vector2(630, 530), "EXIT OPEN: REACH THE DOOR", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#63f2a6"))
-
-func _draw_results() -> void:
-    draw_rect(Rect2(130, 115, 700, 310), Color(0.06, 0.06, 0.12, 0.94), true, 18.0)
-    var title_color := Color("#72f5d9") if result_text == "YOU ESCAPED!" else Color("#ff7898")
-    draw_string(ThemeDB.fallback_font, Vector2(255, 205), result_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 34, title_color)
-    draw_string(ThemeDB.fallback_font, Vector2(335, 260), "FINAL SCORE: " + str(score), HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color("#f2efff"))
-    draw_string(ThemeDB.fallback_font, Vector2(310, 325), "Press Z to play again", HORIZONTAL_ALIGNMENT_LEFT, -1, 21, Color("#ffd76a"))
-    draw_string(ThemeDB.fallback_font, Vector2(335, 365), "ARROWS MOVE  |  Z WARD  |  SPACE DASH", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#b9b5ce"))
+func _update_hud() -> void:
+	$HUD/HealthLabel.text = "HEALTH: %d" % health
+	$HUD/ScoreLabel.text = "SCORE: %d" % score
+	$HUD/RelicLabel.text = "RELICS: %d/%d" % [relics_collected, REQUIRED_RELICS]
+	$HUD/TimeLabel.text = "TIME: %d" % ceili(time_left)
+	var ward := "READY" if skeptic.ward_cooldown_left <= 0.0 else "%.1f" % skeptic.ward_cooldown_left
+	var dash := "READY" if skeptic.dash_cooldown_left <= 0.0 else "%.1f" % skeptic.dash_cooldown_left
+	$HUD/HintLabel.text = "Z WARD: %s     SPACE DASH: %s" % [ward, dash]
 ```
 
-## 5. Make the `.tscn` file
+## 7. Milestones (a playable build after EACH one)
 
-If you created the scene through the editor and attached `Main.gd`, Godot generates `Main.tscn` for you. That is preferred. If you want to create it manually, use:
+| # | Build | Playable result | Do not move on until |
+|---|---|---|---|
+| **M1** | Settings, `InputManager`, `Skeptic`, `StartMenu`, `GameOver`, bare `Main` (floor + walls, no relics/ghost; temporarily call `_finish(false,"TEST")` after a 10 s timer) | Title → move around → game over → Z → play again | Section 8 checks 1–5 pass |
+| **M2** | `Relic` + Exit + HUD + win/lose by timer | You can win (8 relics + exit) or time out | Win and lose screens both show the correct text |
+| **M3** | `Ghost` (spawn, wander, chase, damage) | A real round with a threat | You can lose by health and survive by running away |
+| **M4** | Ward (Z) + Dash (Space) tuning | Full loop | Cooldowns visible in the HUD, mashing does nothing bad |
+| **M5** | Swap rectangles for your art, font, menu resources; add music/SFX | Demo-ready | Full Section 8 checklist |
 
-```ini
-[gd_scene load_steps=2 format=3]
+**Remove the M1 test timer once M2 is done.**
 
-[ext_resource type="Script" path="res://scripts/Main.gd" id="1_main"]
+## 8. Compliance checklist (run after EVERY change)
 
-[node name="Main" type="Node2D"]
-script = ExtResource("1_main")
-```
+- [ ] Only Up/Down/Left/Right, Z and Space are used anywhere. Search the project for `KEY_` and `Input.` and confirm everything is inside `InputManager.gd`.
+- [ ] No mouse/touch/click handlers and no `Button` nodes exist.
+- [ ] Hold an arrow: continuous movement. Release: stops. No reliance on key-repeat.
+- [ ] Z works for start, ward and restart (Caps Lock on and off).
+- [ ] Hold Z through the game over screen: it does **not** restart. Release it, wait 1 s, press again: it does.
+- [ ] Hold Space: only one dash. It's never needed more than about once every 2.5 s.
+- [ ] Hold Up + Down together: nothing breaks and you simply stand still.
+- [ ] Release all keys at once mid-round: no instant loss.
+- [ ] Mash Z and Space randomly on every screen: nothing harmful or skipped.
+- [ ] No mashing, no frame-perfect timing, and the ghost gives you at least 3 s before it can touch you.
+- [ ] Text, player and ghost readable from about 2 m (fullscreen test).
+- [ ] No pop-ups, alerts or new windows.
+- [ ] Title shows `Press Z to start` plus the controls.
+- [ ] Game over shows the score and `Press Z to play again`.
+- [ ] Runs locally with the steps in `README.md`.
+- [ ] Alt-Tab away while holding an arrow and come back: no stuck movement.
 
-## 6. First run checklist
+**Do not tick the checklist until you have actually run the game.**
 
-1. Confirm `InputManager.gd` is enabled as an Autoload named exactly `InputManager`.
-2. Confirm `Main.tscn` has `Main.gd` attached.
-3. Run the project.
-4. The title screen must show `PRESS Z TO START` visually. The title prompt uses the exact required wording: `Press Z to start`.
-5. Press and release Z to start.
-6. Hold an arrow to move continuously, then release it to stop.
-7. Press Space once to dash; holding it must not repeat the dash.
-8. Press Z once to activate the ward pulse; holding it must not repeat the pulse.
-9. Collect eight objects, then reach the exit to win.
-10. Take three hits or wait out the timer to lose.
-11. On the results screen, hold Z: it must not restart automatically. Release Z, wait at least one second, then press Z to restart.
-12. Alt-tab away while moving, then return. Movement must not continue because focus loss clears held keys.
+## 9. Tuning cheat-sheet (all constants, easy to change)
 
-## 7. Important prototype limitations
+| What | Where | Value |
+|---|---|---|
+| Player speed | `Skeptic.SPEED` | 220 |
+| Ghost chase speed | `Ghost.BASE_CHASE_SPEED` | 95 (+ up to 35) |
+| Ghost spawn grace | `Ghost.SPAWN_TIME` | 3 s |
+| Round length | `Main.ROUND_TIME` | 150 s |
+| Hit immunity | `Skeptic.IMMUNITY` | 1.5 s |
+| Ward / Dash cooldown | `WARD_COOLDOWN` / `DASH_COOLDOWN` | 1.5 s / 2.5 s |
 
-This first implementation is a playable arcade prototype, not a finished commercial game. It uses simple drawn geometry and a single arena rather than a tile-based mansion. The furniture is decorative in this version; it does not block movement. That keeps collision behavior forgiving while the core loop is tested. Add solid maze walls, more room layouts, audio, and polished sprites only after the first playable build passes the mandatory checklist.
+Too easy? Raise `BASE_CHASE_SPEED` first, in steps of 10. Too hard? Lower it. Do not shorten the spawn grace below 3 s or the cooldown on Space below 2 s.
 
-Before submitting, verify the project by running it in your installed Godot version. If Godot reports a parser error, fix that error before adding features; do not pile more systems on top of a broken baseline.
-
-## 8. `README.md` run instructions
-
-Create `README.md` with:
+## 10. `README.md`
 
 ```markdown
 # HAUNTED SHIFT
-
-A small top-down arcade horror game made with Godot 4 and GDScript.
+Top-down arcade ghost-dodger made with Godot 4 and GDScript.
 
 ## Run locally
-1. Open the project folder in Godot 4.
-2. Set `res://Main.tscn` as the main scene if it is not already selected.
-3. Press F6 to run the current scene, or F5 to run the project.
+1. Open Godot 4 and import the `Haunted_Shift/` folder (it contains `project.godot`).
+2. Press F5 to run (main scene: `res://scenes/Main.tscn`).
 
 ## Controls
 - Arrow keys: move
-- Z: start / defensive ward / restart
+- Z: start / ward pulse / play again
 - Space: dash
 
-No internet connection is required during play.
+No internet needed during play.
 ```
-
-## 9. Compliance checklist — run after every change
-
-- [ ] Only Up/Down/Left/Right Arrows, Z and Space are used anywhere in the game code.
-- [ ] No mouse/touch/click handlers exist.
-- [ ] Holding an arrow gives continuous movement; releasing stops it; no reliance on key-repeat.
-- [ ] Z works for start, confirm and restart; both `z` and `Z` accepted through the physical Z key.
-- [ ] Screen changes need a fresh Z press; holding Z through game over does not restart instantly.
-- [ ] Space is used only for dash in gameplay, has a cooldown, and is not needed more than about once every 2 seconds.
-- [ ] No mechanic needs opposite keys held together.
-- [ ] Releasing all keys at once never causes an instant loss.
-- [ ] An accidental Z or Space press is never harmful.
-- [ ] No button mashing, frame-perfect timing, or reactions faster than 1 second required.
-- [ ] Text, player and threats are readable from about 2 metres.
-- [ ] Nothing steals focus (no pop-ups, alerts or new windows).
-- [ ] Title screen says `Press Z to start` and shows the controls.
-- [ ] Game over says `Press Z to play again`.
-- [ ] Runs locally with the command in `README.md`.
-
-**Do not mark the checklist complete until you have run and tested the game.**
