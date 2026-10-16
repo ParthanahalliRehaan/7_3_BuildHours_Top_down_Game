@@ -1,0 +1,50 @@
+[gd_scene format=3 uid="uid://cxykad8n3f3hj"]
+
+[ext_resource type="Theme" uid="uid://bki0y7kn603m0" path="res://resources/menu_theme.tres" id="1_hbvfd"]
+[ext_resource type="Script" uid="uid://c1tudjioq6b8h" path="res://scenes/ui/start_menu.gd" id="1_xr47m"]
+
+[node name="StartMenu" type="CanvasLayer" unique_id=108753374]
+script = ExtResource("1_xr47m")
+
+[node name="Root" type="Control" parent="." unique_id=1560194579]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_hbvfd")
+
+[node name="HSContainer" type="PanelContainer" parent="Root" unique_id=164757249]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="HSVContainer" type="VBoxContainer" parent="Root/HSContainer" unique_id=2114901664]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="Label" type="RichTextLabel" parent="Root/HSContainer/HSVContainer" unique_id=575139709]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_font_sizes/normal_font_size = 48
+bbcode_enabled = true
+text = "[wave] HAUNTED 
+SHIFT"
+fit_content = true
+autowrap_mode = 0
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="StartButton" type="Button" parent="Root/HSContainer/HSVContainer" unique_id=1006961880]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 36
+text = "START"
+
+[connection signal="pressed" from="Root/HSContainer/HSVContainer/StartButton" to="." method="_on_start_button_pressed"]

@@ -1,0 +1,14 @@
+[gd_resource type="Theme" format=3 uid="uid://bki0y7kn603m0"]
+
+[ext_resource type="StyleBox" uid="uid://cvvdyoe0ee5p7" path="res://resources/menu_style_box_flat.tres" id="1_muft2"]
+[ext_resource type="FontFile" uid="uid://dfl7klyxnvf1w" path="res://assets/fonts/fonts.ttf" id="2_fnlfk"]
+
+[resource]
+default_font = ExtResource("2_fnlfk")
+Button/font_sizes/font_size = 24
+Button/styles/disabled = ExtResource("1_muft2")
+PanelContainer/styles/panel = ExtResource("1_muft2")
+RichTextLabel/colors/default_color = Color(0, 0, 0, 1)
+RichTextLabelTitle/base_type = &"RichTextLabel"
+RichTextLabelTitle/font_sizes/normal_font_size = 48
+VBoxContainer/constants/separation = 16

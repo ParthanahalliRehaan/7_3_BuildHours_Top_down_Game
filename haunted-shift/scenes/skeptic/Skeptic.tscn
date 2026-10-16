@@ -1,0 +1,19 @@
+[gd_scene format=3 uid="uid://cgv3j63krhmp1"]
+
+[ext_resource type="Script" uid="uid://5jedl7yj81ym" path="res://scenes/skeptic/skeptic.gd" id="1_g2rmd"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_7nmgc"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wl6ik"]
+size = Vector2(32, 20)
+
+[node name="Skeptic" type="CharacterBody2D" unique_id=1866302273]
+script = ExtResource("1_g2rmd")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=816429847]
+shape = SubResource("RectangleShape2D_7nmgc")
+
+[node name="HitBox" type="Area2D" parent="." unique_id=769443148]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HitBox" unique_id=1129966874]
+shape = SubResource("RectangleShape2D_wl6ik")
