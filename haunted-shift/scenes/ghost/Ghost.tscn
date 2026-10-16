@@ -1,0 +1,38 @@
+[gd_scene format=3 uid="uid://djagkmvj6ac7j"]
+
+[ext_resource type="Script" uid="uid://dwjqj6g8y0kar" path="res://scenes/ghost/ghost.gd" id="1_durhr"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_7nmgc"]
+radius = 16.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_wl6ik"]
+radius = 14.0
+
+[node name="Ghost" type="CharacterBody2D" unique_id=403679433]
+collision_layer = 4
+script = ExtResource("1_durhr")
+
+[node name="Color" type="ColorRect" parent="." unique_id=344949799]
+z_index = 2
+offset_left = -16.0
+offset_top = -16.0
+offset_right = 16.0
+offset_bottom = 16.0
+color = Color(0.3023718, 0.15233141, 0.8089043, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1115417808]
+shape = SubResource("CircleShape2D_7nmgc")
+
+[node name="HitBox" type="Area2D" parent="." unique_id=693607850]
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HitBox" unique_id=757284881]
+shape = SubResource("CircleShape2D_wl6ik")
+
+[node name="StunTimer" type="Timer" parent="." unique_id=1304864410]
+wait_time = 1.5
+one_shot = true
+
+[node name="WanderTimer" type="Timer" parent="." unique_id=872400504]
+wait_time = 2.5

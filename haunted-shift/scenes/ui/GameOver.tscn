@@ -1,0 +1,80 @@
+[gd_scene format=3 uid="uid://c0xud0fyufbjq"]
+
+[ext_resource type="Script" uid="uid://ddoap3w7gih3f" path="res://scenes/ui/game_over.gd" id="1_script"]
+[ext_resource type="Theme" uid="uid://ms30gysfubpm" path="res://resources/menu_theme.tres" id="2_theme"]
+[ext_resource type="Script" uid="uid://ct8qvilacv5ok" path="res://scripts/rich_text_torch.gd" id="3_torch"]
+
+[sub_resource type="RichTextEffect" id="RichTextEffect_torch"]
+script = ExtResource("3_torch")
+metadata/_custom_type_script = "uid://ct8qvilacv5ok"
+
+[node name="GameOver" type="CanvasLayer" unique_id=1627883613]
+process_mode = 3
+layer = 20
+script = ExtResource("1_script")
+
+[node name="Root" type="Control" parent="." unique_id=1886681480]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme = ExtResource("2_theme")
+
+[node name="HSContainer" type="PanelContainer" parent="Root" unique_id=1052880300]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="HSVContainer" type="VBoxContainer" parent="Root/HSContainer" unique_id=755806398]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_constants/separation = 24
+
+[node name="Label" type="RichTextLabel" parent="Root/HSContainer/HSVContainer" unique_id=937482856]
+z_index = 2
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+theme = ExtResource("2_theme")
+theme_override_font_sizes/normal_font_size = 128
+bbcode_enabled = true
+text = "GAME OVER"
+fit_content = true
+autowrap_mode = 0
+horizontal_alignment = 1
+vertical_alignment = 1
+custom_effects = [SubResource("RichTextEffect_torch")]
+meta_underlined = false
+
+[node name="Score" type="Label" parent="Root/HSContainer/HSVContainer" unique_id=1698217534]
+z_index = 2
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 86
+text = "SCORE ?"
+horizontal_alignment = 1
+
+[node name="PlayAgainOption" type="Label" parent="Root/HSContainer/HSVContainer" unique_id=2000560370]
+z_index = 2
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 86
+text = "AGAIN"
+horizontal_alignment = 1
+
+[node name="ExitOption" type="Label" parent="Root/HSContainer/HSVContainer" unique_id=1646897676]
+z_index = 2
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 86
+text = "EXIT"
+horizontal_alignment = 1

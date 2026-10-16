@@ -1,14 +1,19 @@
-[gd_resource type="Theme" format=3 uid="uid://bki0y7kn603m0"]
+[gd_resource type="Theme" format=3 uid="uid://ms30gysfubpm"]
 
-[ext_resource type="StyleBox" uid="uid://cvvdyoe0ee5p7" path="res://resources/menu_style_box_flat.tres" id="1_muft2"]
-[ext_resource type="FontFile" uid="uid://dfl7klyxnvf1w" path="res://assets/fonts/fonts.ttf" id="2_fnlfk"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xr47m"]
+bg_color = Color(0.3031671, 0.14773798, 0.16432872, 1)
+skew = Vector2(0.25, 0)
+border_width_left = 8
+border_width_top = 8
+border_width_right = 8
+border_width_bottom = 8
+border_color = Color(0.51, 0.40545, 0.3009, 1)
+border_blend = true
+shadow_color = Color(0.16, 0, 0.010666656, 0.6)
+shadow_size = 128
 
 [resource]
-default_font = ExtResource("2_fnlfk")
-Button/font_sizes/font_size = 24
-Button/styles/disabled = ExtResource("1_muft2")
-PanelContainer/styles/panel = ExtResource("1_muft2")
-RichTextLabel/colors/default_color = Color(0, 0, 0, 1)
-RichTextLabelTitle/base_type = &"RichTextLabel"
-RichTextLabelTitle/font_sizes/normal_font_size = 48
-VBoxContainer/constants/separation = 16
+Button/colors/font_color = Color(0.729719, 0.68707967, 0.51402336, 1)
+Button/colors/font_hover_color = Color(0.23, 0.013800001, 0.013800001, 1)
+PanelContainer/styles/panel = SubResource("StyleBoxFlat_xr47m")
+RichTextLabel/colors/default_color = Color(0.6088578, 0.63184214, 0.6294153, 1)

@@ -1,0 +1,24 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/relic/relic.gd" id="1_relic"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_relic"]
+radius = 24.0
+
+[node name="Relic" type="Area2D"]
+collision_layer = 0
+collision_mask = 2
+script = ExtResource("1_relic")
+
+[node name="Color" type="ColorRect" parent="."]
+mouse_filter = 2
+offset_left = -14.0
+offset_top = -14.0
+offset_right = 14.0
+offset_bottom = 14.0
+pivot_offset = Vector2(14, 14)
+rotation = 0.785398
+color = Color(0.4471, 0.9608, 0.851, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_relic")

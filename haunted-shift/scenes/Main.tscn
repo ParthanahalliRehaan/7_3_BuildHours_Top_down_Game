@@ -1,3 +1,88 @@
 [gd_scene format=3 uid="uid://bngj8duo85kji"]
 
+[ext_resource type="Script" uid="uid://mymxeph1r6q8" path="res://scenes/main.gd" id="1_elqb8"]
+[ext_resource type="PackedScene" uid="uid://cgv3j63krhmp1" path="res://scenes/skeptic/Skeptic.tscn" id="2_rvslj"]
+[ext_resource type="PackedScene" uid="uid://cepp3ildhb4ja" path="res://scenes/ui/PauseMenu.tscn" id="3_0bbpv"]
+[ext_resource type="PackedScene" uid="uid://besqqffp7a8bg" path="res://scenes/ui/HUD.tscn" id="4_hud"]
+[ext_resource type="PackedScene" uid="uid://c0xud0fyufbjq" path="res://scenes/ui/GameOver.tscn" id="5_over"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_rvslj"]
+size = Vector2(20, 1280)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_rarhs"]
+size = Vector2(20, 1280)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_0bbpv"]
+size = Vector2(20, 720)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wl6ik"]
+size = Vector2(20, 720)
+
 [node name="Main" type="Node2D" unique_id=62845800]
+script = ExtResource("1_elqb8")
+
+[node name="World" type="Node2D" parent="." unique_id=398724163]
+
+[node name="Skeptic" parent="World" unique_id=1866302273 instance=ExtResource("2_rvslj")]
+z_index = 1
+position = Vector2(640, 360)
+
+[node name="Floor" type="ColorRect" parent="World" unique_id=1964070070]
+offset_right = 1280.0
+offset_bottom = 720.0
+mouse_filter = 2
+color = Color(0.70376456, 0.70646447, 0.6941675, 1)
+
+[node name="Walls" type="StaticBody2D" parent="World" unique_id=1373499804]
+
+[node name="Top" type="CollisionShape2D" parent="World/Walls" unique_id=1118161181]
+position = Vector2(640, 70)
+rotation = 1.5707964
+shape = SubResource("RectangleShape2D_rvslj")
+
+[node name="Bottom" type="CollisionShape2D" parent="World/Walls" unique_id=1110145362]
+position = Vector2(640, 720)
+rotation = 1.5707964
+shape = SubResource("RectangleShape2D_rarhs")
+
+[node name="Left" type="CollisionShape2D" parent="World/Walls" unique_id=908030539]
+position = Vector2(0, 360)
+shape = SubResource("RectangleShape2D_0bbpv")
+
+[node name="Right" type="CollisionShape2D" parent="World/Walls" unique_id=2023355735]
+position = Vector2(1280, 360)
+shape = SubResource("RectangleShape2D_wl6ik")
+
+[node name="Exit" type="Node2D" parent="World" unique_id=1605314740]
+position = Vector2(1230, 400)
+
+[node name="Door" type="ColorRect" parent="World/Exit" unique_id=2019477032]
+offset_left = -20.0
+offset_top = -40.0
+offset_right = 20.0
+offset_bottom = 40.0
+mouse_filter = 2
+color = Color(0.6431, 0.3176, 0.4392, 1)
+
+[node name="Label" type="Label" parent="World/Exit" unique_id=1643177184]
+offset_left = -110.0
+offset_top = 48.0
+offset_right = 50.0
+offset_bottom = 76.0
+theme_override_font_sizes/font_size = 20
+text = "EXIT LOCKED"
+horizontal_alignment = 1
+
+[node name="Relics" type="Node2D" parent="World" unique_id=2115926137]
+
+[node name="GhostSpawnTimer" type="Timer" parent="." unique_id=1103316113]
+wait_time = 3.0
+one_shot = true
+
+[node name="PauseMenu" parent="." unique_id=108753374 instance=ExtResource("3_0bbpv")]
+visible = false
+
+[node name="GameOver" parent="." unique_id=268343731 instance=ExtResource("5_over")]
+visible = false
+
+[node name="HUD" parent="." unique_id=1213232285 instance=ExtResource("4_hud")]

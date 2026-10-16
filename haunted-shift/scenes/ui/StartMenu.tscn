@@ -1,7 +1,12 @@
 [gd_scene format=3 uid="uid://cxykad8n3f3hj"]
 
-[ext_resource type="Theme" uid="uid://bki0y7kn603m0" path="res://resources/menu_theme.tres" id="1_hbvfd"]
 [ext_resource type="Script" uid="uid://c1tudjioq6b8h" path="res://scenes/ui/start_menu.gd" id="1_xr47m"]
+[ext_resource type="Theme" uid="uid://ms30gysfubpm" path="res://resources/menu_theme.tres" id="2_y35d7"]
+[ext_resource type="Script" uid="uid://ct8qvilacv5ok" path="res://scripts/rich_text_torch.gd" id="4_pridf"]
+
+[sub_resource type="RichTextEffect" id="RichTextEffect_y35d7"]
+script = ExtResource("4_pridf")
+metadata/_custom_type_script = "uid://ct8qvilacv5ok"
 
 [node name="StartMenu" type="CanvasLayer" unique_id=108753374]
 script = ExtResource("1_xr47m")
@@ -13,7 +18,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme = ExtResource("1_hbvfd")
+theme = ExtResource("2_y35d7")
 
 [node name="HSContainer" type="PanelContainer" parent="Root" unique_id=164757249]
 layout_mode = 1
@@ -29,22 +34,27 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 
 [node name="Label" type="RichTextLabel" parent="Root/HSContainer/HSVContainer" unique_id=575139709]
+z_index = 2
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-theme_override_font_sizes/normal_font_size = 48
+theme_override_font_sizes/normal_font_size = 128
 bbcode_enabled = true
-text = "[wave] HAUNTED 
-SHIFT"
+text = "[wave amp=20 freq=4][torch speed=6 width=3 len=13]HAUNTED SHIFT[/torch][/wave]"
 fit_content = true
 autowrap_mode = 0
 horizontal_alignment = 1
 vertical_alignment = 1
+custom_effects = [SubResource("RichTextEffect_y35d7")]
+meta_underlined = false
 
 [node name="StartButton" type="Button" parent="Root/HSContainer/HSVContainer" unique_id=1006961880]
+z_index = 2
 layout_mode = 2
 size_flags_vertical = 4
-theme_override_font_sizes/font_size = 36
+focus_mode = 0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 86
 text = "START"
 
 [connection signal="pressed" from="Root/HSContainer/HSVContainer/StartButton" to="." method="_on_start_button_pressed"]
